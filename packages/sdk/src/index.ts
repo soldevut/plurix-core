@@ -34,8 +34,8 @@ export class PlurixClient {
     return {
       inputMint: params.inputMint,
       outputMint: params.outputMint,
-      priceUsd: 184.20,
-      rateScaled: '184200000000',
+      priceUsd: 108.28,
+      rateScaled: '108280000000',
       timestamp: now,
       signature: '0x' + Array(128).fill('0').map(() => Math.floor(Math.random() * 16).toString(16)).join('')
     };

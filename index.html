@@ -605,7 +605,7 @@ footer a:hover { color: var(--accent); }
             </button>
           </div>
           <div class="input-footer">
-            <span id="pay-usd-est">~$276.30 USD</span>
+            <span id="pay-usd-est">~$162.42 USD</span>
             <div class="preset-pills">
               <span class="pill-pct" onclick="setPayPct(0.25)">25%</span>
               <span class="pill-pct" onclick="setPayPct(0.50)">50%</span>
@@ -636,7 +636,7 @@ footer a:hover { color: var(--accent); }
             </button>
           </div>
           <div class="input-footer">
-            <span id="recv-usd-est">~$276.30 USD</span>
+            <span id="recv-usd-est">~$162.42 USD</span>
             <span style="color:var(--green)">100% Filled at Oracle Mid</span>
           </div>
         </div>
@@ -645,7 +645,7 @@ footer a:hover { color: var(--accent); }
         <div class="quote-spec-box">
           <div class="quote-item">
             <span class="k">Signed Oracle Rate</span>
-            <span class="v accent" id="quote-rate-text">1 SOL = 184.20 USDC</span>
+            <span class="v accent" id="quote-rate-text">1 SOL = 108.28 USDC</span>
           </div>
           <div class="quote-item">
             <span class="k">Self-Slippage</span>
@@ -681,7 +681,7 @@ footer a:hover { color: var(--accent); }
           <div>
             <div style="font-family:var(--mono); font-size:12px; color:var(--text-dim); margin-bottom:2px;" id="chart-pair-label">SOL / USDC · REAL-TIME ORACLE</div>
             <div class="chart-price-display">
-              $<span id="chart-live-price">184.20</span>
+              $<span id="chart-live-price">108.28</span>
               <span class="chart-change-badge">+4.82%</span>
             </div>
           </div>
@@ -1242,11 +1242,11 @@ updateConfetti();
 
 // --- TOKEN DATA ---
 const TOKENS = [
-  { sym: 'SOL', name: 'Solana', priceUsd: 184.20, img: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png', bal: 14.85 },
+  { sym: 'SOL', name: 'Solana', priceUsd: 108.28, img: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png', bal: 14.85 },
   { sym: 'USDC', name: 'USD Coin', priceUsd: 1.00, img: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png', bal: 1450.00 },
-  { sym: 'JUP', name: 'Jupiter', priceUsd: 1.12, img: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN/logo.png', bal: 520.00 },
-  { sym: 'BONK', name: 'Bonk', priceUsd: 0.0000224, img: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263/logo.png', bal: 45000000 },
-  { sym: 'RAY', name: 'Raydium', priceUsd: 3.25, img: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R/logo.png', bal: 80.00 }
+  { sym: 'JUP', name: 'Jupiter', priceUsd: 0.333, img: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN/logo.png', bal: 520.00 },
+  { sym: 'BONK', name: 'Bonk', priceUsd: 0.00000322, img: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263/logo.png', bal: 45000000 },
+  { sym: 'RAY', name: 'Raydium', priceUsd: 1.99, img: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R/logo.png', bal: 80.00 }
 ];
 
 let payToken = TOKENS[0];
@@ -1401,12 +1401,13 @@ function renderChart() {
   // Generate smooth price points
   const pointsCount = currentTf === '1H' ? 24 : (currentTf === '1D' ? 40 : 60);
   const data = [];
-  let base = 180;
+  const curSol = TOKENS[0].priceUsd || 108.28;
+  let base = curSol * 0.982;
   for (let i = 0; i < pointsCount; i++) {
-    base += (Math.random() - 0.48) * 2.2;
+    base += (Math.random() - 0.48) * (curSol * 0.007);
     data.push(base);
   }
-  data[data.length - 1] = 184.20;
+  data[data.length - 1] = curSol;
 
   const min = Math.min(...data);
   const max = Math.max(...data);
@@ -1460,11 +1461,13 @@ window.addEventListener('resize', renderChart);
 // --- MEV SIMULATOR ---
 function updateMevSim(val) {
   const sol = parseFloat(val);
-  document.getElementById('sim-sol-label').textContent = `Trade Size: ${sol} SOL ($${(sol * 184.2).toLocaleString()})`;
+  const curSol = TOKENS[0].priceUsd || 108.28;
+  const totalUsd = sol * curSol;
+  document.getElementById('sim-sol-label').textContent = `Trade Size: ${sol} SOL ($${totalUsd.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})})`;
   
   // Raydium loss formula approx 1.8% to 5.2% based on trade size
   const lossRate = 0.018 + (sol / 100) * 0.035;
-  const raydiumLoss = (sol * 184.2 * lossRate).toFixed(2);
+  const raydiumLoss = (totalUsd * lossRate).toFixed(2);
   document.getElementById('sim-raydium-loss').textContent = `-$${raydiumLoss}`;
 }
 
@@ -1557,11 +1560,39 @@ async function connectWallet() {
   }
 }
 
+// Live price synchronization via real-time market API
+async function fetchLivePrices() {
+  try {
+    const res = await fetch('https://api.binance.com/api/v3/ticker/price?symbols=%5B%22SOLUSDT%22,%22JUPUSDT%22,%22RAYUSDT%22,%22BONKUSDT%22%5D');
+    if (!res.ok) return;
+    const items = await res.json();
+    items.forEach(item => {
+      if (item.symbol === 'SOLUSDT') {
+        const p = parseFloat(item.price);
+        TOKENS[0].priceUsd = p;
+        const liveEl = document.getElementById('chart-live-price');
+        if (liveEl) liveEl.textContent = p.toFixed(2);
+      }
+      if (item.symbol === 'JUPUSDT') TOKENS[2].priceUsd = parseFloat(item.price);
+      if (item.symbol === 'BONKUSDT') TOKENS[3].priceUsd = parseFloat(item.price);
+      if (item.symbol === 'RAYUSDT') TOKENS[4].priceUsd = parseFloat(item.price);
+    });
+    calculateQuote();
+    renderChart();
+    const simInp = document.getElementById('sim-range');
+    if (simInp) updateMevSim(simInp.value);
+  } catch(e) {
+    console.warn('Live price sync fallback:', e);
+  }
+}
+
 // Init on load
 window.addEventListener('DOMContentLoaded', () => {
   calculateQuote();
   renderChart();
   updateMevSim(10);
+  fetchLivePrices();
+  setInterval(fetchLivePrices, 15000);
 });
 </script>
 </body>
