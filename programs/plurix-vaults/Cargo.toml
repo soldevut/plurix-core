@@ -1,0 +1,16 @@
+[package]
+name = "plurix-vaults"
+version = "0.1.0"
+description = "Anchor smart contract for PLURIX shared liquidity vault settlements on Solana"
+edition = "2021"
+license = "Apache-2.0 OR MIT"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "plurix_vaults"
+
+[dependencies]
+anchor-lang = "0.29.0"
+anchor-spl = "0.29.0"
+solana-program = "1.18"
+pyth-sdk-solana = "0.10.1"

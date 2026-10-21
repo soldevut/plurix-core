@@ -1,0 +1,1568 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PLURIX · Shared Liquidity Vault Protocol on Solana</title>
+<meta name="description" content="Next-generation Solana shared liquidity exchange with zero self-slippage, signed oracle executions, and MEV-immune private vault settlement.">
+<link rel="icon" type="image/png" href="logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- Solana Web3 Browser Bundle -->
+<script src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/buffer/6.0.3/buffer.min.js"></script>
+<script>window.Buffer = buffer.Buffer;</script>
+<style>
+:root {
+  --bg: #030508;
+  --bg-card: rgba(10, 15, 24, 0.72);
+  --bg-card-hover: rgba(15, 22, 34, 0.88);
+  --bg-input: rgba(6, 10, 16, 0.7);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-focus: rgba(0, 245, 160, 0.4);
+  --border-hover: rgba(255, 255, 255, 0.16);
+  --accent: #00F5A0;
+  --accent-bright: #62FFD2;
+  --accent-glow: rgba(0, 245, 160, 0.25);
+  --electric: #00D8F6;
+  --purple: #8B5CF6;
+  --text: #F1F5F9;
+  --text-muted: #8E9BAE;
+  --text-dim: #4B5565;
+  --red: #FF4757;
+  --green: #00F5A0;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Instrument Sans', system-ui, -apple-system, sans-serif;
+  --display: 'Bricolage Grotesque', var(--sans);
+  --gradient-brand: linear-gradient(135deg, #62FFD2 0%, #00F5A0 40%, #00D8F6 80%, #8B5CF6 100%);
+  --gradient-card: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.005) 100%);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { background: var(--bg); color: var(--text); font-family: var(--sans); -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
+body { min-height: 100vh; overflow-x: hidden; line-height: 1.55; position: relative; }
+
+/* Dynamic Atmospheric Background Canvas */
+#quantum-canvas {
+  position: fixed; inset: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 0; opacity: 0.55;
+}
+
+/* Ambient Radial Light Orbs */
+.ambient-glow {
+  position: fixed; pointer-events: none; z-index: 0;
+  border-radius: 50%; filter: blur(140px);
+}
+.glow-1 { top: -140px; left: 50%; transform: translateX(-50%); width: 850px; height: 420px; background: radial-gradient(circle, rgba(0, 245, 160, 0.16) 0%, rgba(0, 216, 246, 0.08) 50%, transparent 70%); }
+.glow-2 { top: 35%; right: -120px; width: 550px; height: 550px; background: radial-gradient(circle, rgba(139, 92, 246, 0.10) 0%, transparent 70%); }
+.glow-3 { bottom: 5%; left: -140px; width: 650px; height: 450px; background: radial-gradient(circle, rgba(0, 245, 160, 0.08) 0%, transparent 70%); }
+
+/* Interactive Cyber-Cursor */
+#cursor-dot {
+  position: fixed; width: 5px; height: 5px; background: var(--accent-bright);
+  border-radius: 50%; pointer-events: none; z-index: 9999;
+  transform: translate(-50%, -50%); transition: transform 0.04s linear;
+  box-shadow: 0 0 10px var(--accent);
+}
+#cursor-ring {
+  position: fixed; width: 32px; height: 32px; border: 1.5px solid rgba(0, 245, 160, 0.35);
+  border-radius: 50%; pointer-events: none; z-index: 9998;
+  transform: translate(-50%, -50%); transition: transform 0.12s ease-out, width 0.25s, height 0.25s, border-color 0.25s, background 0.25s;
+}
+.cursor-hover #cursor-ring {
+  width: 50px; height: 50px; border-color: var(--accent); background: rgba(0, 245, 160, 0.06);
+}
+
+/* Confetti Burst Canvas */
+#fx-canvas {
+  position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1000;
+}
+
+.shell {
+  position: relative; z-index: 1; max-width: 1240px; margin: 0 auto;
+  padding: 0 clamp(16px, 3.5vw, 36px) 90px;
+}
+
+/* Glass Specular Cards */
+.glass {
+  background: var(--bg-card);
+  backdrop-filter: blur(24px) saturate(1.3);
+  -webkit-backdrop-filter: blur(24px) saturate(1.3);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  position: relative;
+  box-shadow: 0 20px 45px -15px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+}
+.glass:hover {
+  border-color: var(--border-hover);
+  box-shadow: 0 25px 55px -15px rgba(0, 245, 160, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.glass-glow::before {
+  content: ''; position: absolute; inset: -1px; border-radius: inherit; padding: 1px;
+  background: linear-gradient(135deg, rgba(0, 245, 160, 0.45), rgba(0, 216, 246, 0.1) 40%, rgba(139, 92, 246, 0.35));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  pointer-events: none;
+}
+
+/* Card Spotlight Follower */
+.spotlight-card { position: relative; overflow: hidden; }
+.spotlight-card::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  background: radial-gradient(380px circle at var(--mouse-x, -500px) var(--mouse-y, -500px), rgba(0, 245, 160, 0.07), transparent 70%);
+  opacity: 0; transition: opacity .3s;
+}
+.spotlight-card:hover::after { opacity: 1; }
+
+/* Header & Top Navigation */
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 22px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.brand {
+  display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--text);
+  font-family: var(--display); font-weight: 800; font-size: 22px; letter-spacing: -0.02em;
+}
+.brand img {
+  width: 34px; height: 34px; border-radius: 9px;
+  border: 1px solid rgba(0, 245, 160, 0.3);
+  box-shadow: 0 0 20px rgba(0, 245, 160, 0.3);
+}
+.brand span.gradient {
+  background: var(--gradient-brand); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.brand-tag {
+  background: rgba(0, 245, 160, 0.12); color: var(--accent); border: 1px solid rgba(0, 245, 160, 0.3);
+  font-family: var(--mono); font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 5px;
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+
+nav { display: flex; align-items: center; gap: 6px; }
+.nav-btn {
+  background: transparent; border: 1px solid transparent; color: var(--text-muted);
+  font-family: var(--sans); font-weight: 600; font-size: 14px; padding: 8px 16px; border-radius: 10px;
+  cursor: pointer; transition: all .15s;
+}
+.nav-btn:hover { color: var(--text); background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.08); }
+.nav-btn.active {
+  color: #030508; background: var(--accent); font-weight: 700;
+  box-shadow: 0 4px 18px rgba(0, 245, 160, 0.35);
+}
+
+.header-right { display: flex; align-items: center; gap: 12px; }
+
+/* SFX Sound Toggle Pill */
+.btn-sound-toggle {
+  display: inline-flex; align-items: center; gap: 6px; background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border); color: var(--text-muted); font-family: var(--mono); font-size: 11px;
+  padding: 7px 12px; border-radius: 8px; cursor: pointer; transition: all .15s;
+}
+.btn-sound-toggle:hover { color: var(--accent); border-color: rgba(0, 245, 160, 0.3); background: rgba(0, 245, 160, 0.05); }
+.btn-sound-toggle.muted { opacity: 0.5; color: var(--text-dim); }
+
+.solana-pill {
+  display: inline-flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 11.5px;
+  color: var(--accent); background: rgba(0, 245, 160, 0.08); border: 1px solid rgba(0, 245, 160, 0.25);
+  padding: 6px 14px; border-radius: 8px;
+}
+.solana-pill i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); animation: pulse 2s infinite; }
+@keyframes pulse { 50% { opacity: 0.3; } }
+
+.btn-connect {
+  background: var(--text); color: #030508; font-family: var(--display); font-weight: 700;
+  font-size: 14px; padding: 9px 20px; border-radius: 10px; border: 1px solid transparent; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.15); transition: all .2s ease;
+}
+.btn-connect:hover {
+  background: var(--accent); color: #030508; box-shadow: 0 6px 24px rgba(0, 245, 160, 0.4);
+  transform: translateY(-1px);
+}
+.btn-connect.connected {
+  background: rgba(0, 245, 160, 0.12); color: var(--accent); border-color: rgba(0, 245, 160, 0.35);
+}
+
+/* Protocol Telemetry Strip */
+.metrics-strip {
+  margin-top: 18px; padding: 12px 20px; border-radius: 14px;
+  background: rgba(8, 12, 19, 0.65); border: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  font-family: var(--mono); font-size: 12px; color: var(--text-muted); overflow-x: auto;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+.metrics-title { display: flex; align-items: center; gap: 8px; flex: none; color: var(--accent); font-weight: 700; }
+.metrics-title b { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+.metrics-group { display: flex; gap: 26px; flex: none; }
+.metrics-group span { color: var(--text-dim); }
+.metrics-group span strong { color: var(--text); font-weight: 600; }
+
+/* View Switching */
+.view-section { display: none; margin-top: 32px; }
+.view-section.active { display: block; animation: fadeIn .3s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Hero Banner for Exchange */
+.hero-headline {
+  text-align: center; margin-bottom: 32px;
+}
+.hero-tag {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 12px; color: var(--accent);
+  background: rgba(0, 245, 160, 0.08); border: 1px solid rgba(0, 245, 160, 0.25);
+  padding: 5px 14px; border-radius: 99px; margin-bottom: 16px;
+}
+.hero-headline h1 {
+  font-family: var(--display); font-size: clamp(34px, 5vw, 56px);
+  font-weight: 800; line-height: 1.08; letter-spacing: -0.03em;
+  color: var(--text); text-wrap: balance; max-width: 900px; margin: 0 auto 12px;
+}
+.hero-headline h1 span {
+  background: var(--gradient-brand); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.hero-headline p {
+  color: var(--text-muted); font-size: clamp(15px, 1.8vw, 17px); max-width: 680px; margin: 0 auto;
+}
+
+/* TAB 1: TRADING LAYOUT */
+.trading-layout {
+  display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 26px;
+}
+@media (max-width: 960px) {
+  .trading-layout { grid-template-columns: 1fr; }
+}
+
+.panel-card { padding: 26px; }
+.panel-head {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;
+}
+.panel-title {
+  font-family: var(--display); font-weight: 800; font-size: 20px; color: var(--text);
+  display: flex; align-items: center; gap: 10px;
+}
+.trade-mode-toggle {
+  display: flex; background: rgba(0, 0, 0, 0.4); padding: 3px; border-radius: 8px; border: 1px solid var(--border);
+}
+.mode-btn {
+  background: transparent; border: none; color: var(--text-muted); font-family: var(--sans);
+  font-weight: 600; font-size: 12.5px; padding: 5px 12px; border-radius: 6px; cursor: pointer; transition: all .15s;
+}
+.mode-btn.active { background: rgba(255, 255, 255, 0.08); color: var(--text); }
+
+/* Input Block */
+.input-block {
+  background: var(--bg-input); border: 1px solid var(--border); border-radius: 14px;
+  padding: 18px; margin-bottom: 10px; transition: border-color .2s, box-shadow .2s;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+.input-block:focus-within {
+  border-color: var(--border-focus);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 245, 160, 0.15);
+}
+.input-header {
+  display: flex; justify-content: space-between; font-family: var(--mono); font-size: 12px;
+  color: var(--text-dim); margin-bottom: 10px;
+}
+.input-header span.bal b { color: var(--text-muted); cursor: pointer; transition: color .15s; }
+.input-header span.bal b:hover { color: var(--accent); }
+.input-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.amount-inp {
+  background: transparent; border: none; outline: none; width: 100%;
+  font-family: var(--display); font-size: 32px; font-weight: 800; color: var(--text);
+}
+.amount-inp::placeholder { color: var(--text-dim); }
+
+/* Token Selector Button */
+.token-btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border); padding: 8px 14px; border-radius: 10px;
+  font-family: var(--sans); font-weight: 700; font-size: 15px; color: var(--text);
+  cursor: pointer; flex: none; transition: all .15s;
+}
+.token-btn:hover { border-color: rgba(0, 245, 160, 0.4); background: rgba(0, 245, 160, 0.06); }
+.token-btn img { width: 24px; height: 24px; border-radius: 50%; }
+.token-btn svg.chevron { width: 12px; height: 12px; opacity: 0.6; }
+
+.input-footer {
+  display: flex; justify-content: space-between; align-items: center; font-family: var(--mono); font-size: 12px;
+  color: var(--text-dim); margin-top: 10px;
+}
+.preset-pills { display: flex; gap: 6px; }
+.pill-pct {
+  background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border); color: var(--text-muted);
+  font-family: var(--mono); font-size: 11px; padding: 3px 9px; border-radius: 6px; cursor: pointer; transition: all .15s;
+}
+.pill-pct:hover { color: var(--accent); border-color: rgba(0, 245, 160, 0.4); background: rgba(0, 245, 160, 0.08); }
+
+/* Flip Button */
+.flip-wrap { display: flex; justify-content: center; margin: -12px 0; position: relative; z-index: 2; }
+.btn-flip {
+  background: #0B111A; border: 1px solid var(--border); color: var(--accent);
+  width: 36px; height: 36px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6); transition: transform .25s ease, border-color .2s, box-shadow .2s;
+}
+.btn-flip:hover { transform: rotate(180deg); border-color: var(--accent); box-shadow: 0 0 16px rgba(0, 245, 160, 0.35); }
+
+/* Signed Quote Details Box */
+.quote-spec-box {
+  margin-top: 16px; background: var(--bg-input); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px; font-family: var(--mono); font-size: 12px;
+  display: flex; flex-direction: column; gap: 9px;
+}
+.quote-item { display: flex; justify-content: space-between; align-items: center; }
+.quote-item span.k { color: var(--text-dim); }
+.quote-item span.v { color: var(--text); font-weight: 500; }
+.quote-item span.v.accent { color: var(--accent); font-weight: 700; }
+.quote-item span.v.zero { color: var(--green); font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
+.quote-item span.v.zero::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+
+.quote-timer-row {
+  display: flex; align-items: center; justify-content: space-between;
+  border-top: 1px solid rgba(255, 255, 255, 0.06); padding-top: 10px; margin-top: 4px; font-size: 11.5px;
+}
+.quote-timer-row b { color: var(--accent); }
+
+.btn-execute {
+  width: 100%; margin-top: 18px; padding: 18px; border-radius: 14px; border: none;
+  background: var(--gradient-brand); color: #030508; font-family: var(--display); font-weight: 800;
+  font-size: 17px; cursor: pointer; box-shadow: 0 8px 30px rgba(0, 245, 160, 0.3);
+  transition: transform .15s ease, box-shadow .15s ease, filter .15s;
+}
+.btn-execute:hover { transform: translateY(-2px); box-shadow: 0 12px 36px rgba(0, 245, 160, 0.45); filter: brightness(1.05); }
+.btn-execute:active { transform: translateY(0); }
+
+/* Right Panel: Interactive Chart & MEV Simulator */
+.chart-box {
+  height: 240px; width: 100%; position: relative; margin: 16px 0 20px;
+}
+#price-chart {
+  width: 100%; height: 100%; display: block;
+}
+.chart-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
+}
+.chart-price-display { font-family: var(--display); font-weight: 800; font-size: 26px; color: var(--text); }
+.chart-change-badge {
+  font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--green);
+  background: rgba(0, 245, 160, 0.1); border: 1px solid rgba(0, 245, 160, 0.3);
+  padding: 3px 8px; border-radius: 6px; margin-left: 8px;
+}
+.timeframe-pills { display: flex; gap: 5px; }
+.tf-btn {
+  background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border); color: var(--text-muted);
+  font-family: var(--mono); font-size: 11.5px; padding: 4px 10px; border-radius: 6px; cursor: pointer;
+}
+.tf-btn.active { color: var(--accent); border-color: rgba(0, 245, 160, 0.4); background: rgba(0, 245, 160, 0.1); font-weight: 700; }
+
+/* MEV Sandwich Attack Simulator Card */
+.mev-simulator {
+  background: var(--bg-input); border: 1px solid var(--border); border-radius: 14px;
+  padding: 18px; margin-top: 20px;
+}
+.mev-sim-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.mev-sim-title { font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--text); display: flex; align-items: center; gap: 8px; }
+.mev-sim-title b { color: var(--accent); }
+.sim-range-wrap { margin-bottom: 16px; }
+.sim-range-wrap input[type=range] {
+  width: 100%; height: 6px; border-radius: 4px; accent-color: var(--accent);
+  background: rgba(255, 255, 255, 0.1); outline: none; cursor: pointer;
+}
+.sim-compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.sim-col {
+  padding: 12px 14px; border-radius: 10px; font-family: var(--mono); font-size: 12px;
+}
+.sim-col.raydium { background: rgba(255, 71, 87, 0.06); border: 1px solid rgba(255, 71, 87, 0.25); }
+.sim-col.PLURIX-vault { background: rgba(0, 245, 160, 0.06); border: 1px solid rgba(0, 245, 160, 0.25); }
+.sim-col-label { font-size: 11px; text-transform: uppercase; margin-bottom: 4px; }
+.sim-col.raydium .sim-col-label { color: var(--red); }
+.sim-col.PLURIX-vault .sim-col-label { color: var(--accent); }
+.sim-col-loss { font-size: 18px; font-weight: 800; font-family: var(--display); margin-bottom: 4px; }
+.sim-col.raydium .sim-col-loss { color: var(--red); }
+.sim-col.PLURIX-vault .sim-col-loss { color: var(--green); }
+.sim-col-sub { font-size: 10.5px; color: var(--text-dim); }
+
+/* TAB 2: VAULTS EXPLORER */
+.vaults-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;
+}
+.vault-card { padding: 22px; }
+.vault-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.vault-pair { display: flex; align-items: center; gap: 10px; }
+.vault-icons { display: flex; }
+.vault-icons img { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #0B111A; }
+.vault-icons img:nth-child(2) { margin-left: -10px; }
+.vault-names { font-family: var(--display); font-weight: 700; font-size: 17px; }
+.vault-names span { color: var(--text-dim); font-size: 13px; font-weight: 500; }
+.vault-badge {
+  font-family: var(--mono); font-size: 11px; color: var(--accent);
+  background: rgba(0, 245, 160, 0.08); border: 1px solid rgba(0, 245, 160, 0.25);
+  padding: 3px 8px; border-radius: 6px;
+}
+.vault-stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+.v-stat { background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 10px; border-radius: 8px; }
+.v-stat-k { font-family: var(--mono); font-size: 11px; color: var(--text-dim); margin-bottom: 4px; }
+.v-stat-v { font-family: var(--display); font-weight: 700; font-size: 16px; color: var(--text); }
+.v-stat-v.green { color: var(--green); }
+.btn-deposit {
+  width: 100%; padding: 12px; border-radius: 10px; background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border); color: var(--text); font-family: var(--sans); font-weight: 700;
+  font-size: 14px; cursor: pointer; transition: all .15s;
+}
+.btn-deposit:hover { border-color: var(--accent); background: rgba(0, 245, 160, 0.08); color: var(--accent); }
+
+/* TAB 3: TOKEN LAUNCHER */
+.launcher-layout {
+  display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 26px;
+}
+@media (max-width: 960px) { .launcher-layout { grid-template-columns: 1fr; } }
+.launch-form { padding: 26px; }
+.form-group { margin-bottom: 16px; }
+.form-label { display: block; font-family: var(--sans); font-weight: 600; font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+.form-label span.req { color: var(--accent); }
+.form-input {
+  width: 100%; background: var(--bg-input); border: 1px solid var(--border); border-radius: 10px;
+  padding: 13px 16px; font-family: var(--sans); font-size: 14px; color: var(--text); outline: none;
+  transition: border-color .15s;
+}
+.form-input:focus { border-color: var(--border-focus); }
+.form-textarea { resize: vertical; min-height: 80px; }
+.fee-summary-box {
+  background: var(--bg-input); border: 1px solid var(--border); border-radius: 12px;
+  padding: 16px; font-family: var(--mono); font-size: 12px; margin-bottom: 20px;
+}
+.fee-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+.fee-row:last-child { margin-bottom: 0; padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, 0.06); font-weight: 700; color: var(--accent); }
+
+/* TAB 4: ARCHITECTURE & MECHANICS */
+.arch-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 22px; }
+.arch-card { padding: 26px; }
+.arch-icon {
+  width: 44px; height: 44px; border-radius: 12px; background: rgba(0, 245, 160, 0.1);
+  border: 1px solid rgba(0, 245, 160, 0.3); display: flex; align-items: center; justify-content: center;
+  color: var(--accent); font-family: var(--mono); font-size: 18px; font-weight: 700; margin-bottom: 18px;
+}
+.arch-title { font-family: var(--display); font-weight: 700; font-size: 19px; margin-bottom: 10px; }
+.arch-desc { color: var(--text-muted); font-size: 14.5px; line-height: 1.6; }
+
+/* MODAL: Token Selector */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(3, 5, 8, 0.85); backdrop-filter: blur(10px);
+  display: none; align-items: center; justify-content: center; z-index: 10000; padding: 20px;
+}
+.modal-overlay.active { display: flex; animation: fadeIn .2s ease; }
+.modal-card {
+  width: 100%; max-width: 440px; background: #0A0F18; border: 1px solid var(--border);
+  border-radius: 20px; padding: 24px; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8);
+}
+.modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.modal-title { font-family: var(--display); font-weight: 700; font-size: 18px; }
+.modal-close {
+  background: transparent; border: none; color: var(--text-muted); font-size: 20px;
+  cursor: pointer; padding: 4px;
+}
+.modal-close:hover { color: var(--text); }
+.token-search-inp {
+  width: 100%; background: var(--bg-input); border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px 16px; color: var(--text); font-family: var(--sans); font-size: 14px; outline: none; margin-bottom: 14px;
+}
+.token-list { max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.token-row {
+  display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 10px;
+  background: transparent; border: 1px solid transparent; cursor: pointer; transition: all .15s;
+}
+.token-row:hover { background: rgba(255, 255, 255, 0.04); border-color: var(--border); }
+.token-info { display: flex; align-items: center; gap: 12px; }
+.token-info img { width: 32px; height: 32px; border-radius: 50%; }
+.token-sym { font-family: var(--display); font-weight: 700; font-size: 15px; }
+.token-name { font-size: 12px; color: var(--text-dim); }
+
+/* MODAL: Transaction Receipt */
+.receipt-card {
+  text-align: center; max-width: 420px;
+}
+.receipt-badge {
+  width: 60px; height: 60px; border-radius: 50%; background: rgba(0, 245, 160, 0.12);
+  border: 1px solid rgba(0, 245, 160, 0.35); color: var(--green); display: flex;
+  align-items: center; justify-content: center; font-size: 28px; margin: 0 auto 16px;
+  box-shadow: 0 0 25px rgba(0, 245, 160, 0.3);
+}
+.receipt-title { font-family: var(--display); font-weight: 800; font-size: 22px; margin-bottom: 6px; }
+.receipt-desc { color: var(--text-muted); font-size: 14px; margin-bottom: 20px; }
+.receipt-details {
+  background: var(--bg-input); border: 1px solid var(--border); border-radius: 12px;
+  padding: 14px; font-family: var(--mono); font-size: 12px; margin-bottom: 20px; text-align: left;
+}
+.btn-close-receipt {
+  width: 100%; padding: 14px; border-radius: 10px; background: var(--accent); color: #030508;
+  font-family: var(--sans); font-weight: 700; font-size: 15px; border: none; cursor: pointer;
+}
+
+/* Footer */
+footer {
+  margin-top: 80px; padding-top: 30px; border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex; align-items: center; justify-content: space-between; font-family: var(--mono); font-size: 12px; color: var(--text-dim);
+}
+footer a { color: var(--text-muted); text-decoration: none; }
+footer a:hover { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- Dynamic Ambient Canvas -->
+<canvas id="quantum-canvas"></canvas>
+<canvas id="fx-canvas"></canvas>
+
+<!-- Atmospheric Glows -->
+<div class="ambient-glow glow-1"></div>
+<div class="ambient-glow glow-2"></div>
+<div class="ambient-glow glow-3"></div>
+
+<!-- Interactive Cyber-Cursor -->
+<div id="cursor-dot"></div>
+<div id="cursor-ring"></div>
+
+<div class="shell">
+
+  <!-- Header -->
+  <header>
+    <a href="#" class="brand">
+      <img src="logo.png" alt="PLURIX Logo">
+      <span class="gradient">PLURIX</span>
+      <span class="brand-tag">MAINNET</span>
+    </a>
+
+    <nav>
+      <button class="nav-btn active" onclick="switchView('trade', this)">Swap</button>
+      <button class="nav-btn" onclick="switchView('vaults', this)">Vaults</button>
+      <button class="nav-btn" onclick="switchView('launcher', this)">Launcher</button>
+      <button class="nav-btn" onclick="switchView('mechanics', this)">Architecture</button>
+    </nav>
+
+    <div class="header-right">
+      <button class="btn-sound-toggle" id="btn-sound-toggle" onclick="toggleSFX()" title="Toggle Web Audio SFX">
+        <span id="sfx-icon">🔊</span> <span id="sfx-status">SFX ON</span>
+      </button>
+
+      <div class="solana-pill">
+        <i></i> <span>SOL 18ms</span>
+      </div>
+
+      <button class="btn-connect" id="btn-wallet-connect" onclick="connectWallet()">Connect Wallet</button>
+    </div>
+  </header>
+
+  <!-- Live Telemetry Strip -->
+  <div class="metrics-strip">
+    <div class="metrics-title"><b></b> PROTOCOL STATE</div>
+    <div class="metrics-group">
+      <span>TVL: <strong>$14,820,490</strong></span>
+      <span>24H VOL: <strong>$32,410,120</strong></span>
+      <span>SHARED VAULTS: <strong>48 ACTIVE</strong></span>
+      <span>SELF-SLIPPAGE: <strong style="color:var(--green)">0.00%</strong></span>
+      <span>PLATFORM FEE: <strong style="color:var(--green)">0.00%</strong></span>
+      <span>PROTECTED TRADES: <strong>149,820</strong></span>
+    </div>
+  </div>
+
+  <!-- VIEW 1: PRO TRADING DASHBOARD -->
+  <div id="view-trade" class="view-section active">
+
+    <div class="hero-headline">
+      <div class="hero-tag">SHARED VAULT LIQUIDITY · SOLANA L1</div>
+      <h1>Zero Slippage. Private Settlement. <br><span>Zero Front-Running.</span></h1>
+      <p>Trade directly against collective liquidity vaults with signed off-chain oracle prices. No public mempool exposure.</p>
+    </div>
+
+    <div class="trading-layout">
+      
+      <!-- Swap Terminal Card -->
+      <div class="glass glass-glow spotlight-card panel-card">
+        <div class="panel-head">
+          <div class="panel-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg>
+            Instant Swap
+          </div>
+          <div class="trade-mode-toggle">
+            <button class="mode-btn active" onclick="setMode('market', this)">Market</button>
+            <button class="mode-btn" onclick="setMode('limit', this)">Oracle Limit</button>
+          </div>
+        </div>
+
+        <!-- Pay Token Block -->
+        <div class="input-block">
+          <div class="input-header">
+            <span>You Pay</span>
+            <span class="bal">Balance: <b id="pay-bal-display" onclick="setMaxPay()">0.00 SOL</b></span>
+          </div>
+          <div class="input-row">
+            <input type="number" class="amount-inp" id="pay-amount" placeholder="0.0" value="1.5" oninput="calculateQuote()" autocomplete="off">
+            <button class="token-btn" id="pay-token-btn" onclick="openTokenModal('pay')">
+              <img id="pay-token-img" src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png" alt="SOL">
+              <span id="pay-token-sym">SOL</span>
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+          </div>
+          <div class="input-footer">
+            <span id="pay-usd-est">~$276.30 USD</span>
+            <div class="preset-pills">
+              <span class="pill-pct" onclick="setPayPct(0.25)">25%</span>
+              <span class="pill-pct" onclick="setPayPct(0.50)">50%</span>
+              <span class="pill-pct" onclick="setPayPct(1.00)">MAX</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Flip Tokens Button -->
+        <div class="flip-wrap">
+          <button class="btn-flip" onclick="flipTokens()" title="Reverse Pair">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16V4m0 0L3 8m4-4l4 4"/><path d="M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
+          </button>
+        </div>
+
+        <!-- Receive Token Block -->
+        <div class="input-block">
+          <div class="input-header">
+            <span>You Receive (Guaranteed)</span>
+            <span class="bal">Balance: <b id="recv-bal-display">0.00 USDC</b></span>
+          </div>
+          <div class="input-row">
+            <input type="number" class="amount-inp" id="recv-amount" placeholder="0.0" readonly autocomplete="off">
+            <button class="token-btn" id="recv-token-btn" onclick="openTokenModal('recv')">
+              <img id="recv-token-img" src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png" alt="USDC">
+              <span id="recv-token-sym">USDC</span>
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+          </div>
+          <div class="input-footer">
+            <span id="recv-usd-est">~$276.30 USD</span>
+            <span style="color:var(--green)">100% Filled at Oracle Mid</span>
+          </div>
+        </div>
+
+        <!-- Signed Quote Telemetry -->
+        <div class="quote-spec-box">
+          <div class="quote-item">
+            <span class="k">Signed Oracle Rate</span>
+            <span class="v accent" id="quote-rate-text">1 SOL = 184.20 USDC</span>
+          </div>
+          <div class="quote-item">
+            <span class="k">Self-Slippage</span>
+            <span class="v zero">0.00% (Zero)</span>
+          </div>
+          <div class="quote-item">
+            <span class="k">Platform Protocol Fee</span>
+            <span class="v zero">0.00%</span>
+          </div>
+          <div class="quote-item">
+            <span class="k">MEV Front-Running Risk</span>
+            <span class="v zero">0.00% (Protected)</span>
+          </div>
+          <div class="quote-item">
+            <span class="k">Liquidity Vault Source</span>
+            <span class="v">PLURIX Shared Vault #04 (Depth: $4.2M)</span>
+          </div>
+          <div class="quote-timer-row">
+            <span>Oracle Signature Expire: <b id="quote-countdown">4.8s</b></span>
+            <span style="color:var(--text-dim)">Pyth Network High-Frequency Feed</span>
+          </div>
+        </div>
+
+        <button class="btn-execute" id="btn-swap-execute" onclick="executeSwap()">
+          Swap Tokens with Zero Slippage
+        </button>
+      </div>
+
+      <!-- Right Column: Interactive Canvas Chart & MEV Simulator -->
+      <div class="glass spotlight-card panel-card">
+        
+        <div class="chart-header">
+          <div>
+            <div style="font-family:var(--mono); font-size:12px; color:var(--text-dim); margin-bottom:2px;" id="chart-pair-label">SOL / USDC · REAL-TIME ORACLE</div>
+            <div class="chart-price-display">
+              $<span id="chart-live-price">184.20</span>
+              <span class="chart-change-badge">+4.82%</span>
+            </div>
+          </div>
+          <div class="timeframe-pills">
+            <button class="tf-btn" onclick="setTimeframe('1H', this)">1H</button>
+            <button class="tf-btn active" onclick="setTimeframe('1D', this)">1D</button>
+            <button class="tf-btn" onclick="setTimeframe('1W', this)">1W</button>
+          </div>
+        </div>
+
+        <!-- Real-Time HTML5 Canvas Chart -->
+        <div class="chart-box">
+          <canvas id="price-chart"></canvas>
+        </div>
+
+        <!-- MEV Sandwich Attack Simulator -->
+        <div class="mev-simulator">
+          <div class="mev-sim-head">
+            <div class="mev-sim-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              MEV Sandwich Protection Calculator
+            </div>
+            <span style="font-family:var(--mono); font-size:12px; color:var(--accent)" id="sim-sol-label">Trade Size: 10 SOL</span>
+          </div>
+
+          <div class="sim-range-wrap">
+            <input type="range" id="sim-range" min="1" max="100" value="10" oninput="updateMevSim(this.value)">
+          </div>
+
+          <div class="sim-compare-grid">
+            <div class="sim-col raydium">
+              <div class="sim-col-label">Standard AMM (Raydium)</div>
+              <div class="sim-col-loss" id="sim-raydium-loss">-$48.20</div>
+              <div class="sim-col-sub">Lost to sandwich bots & high slippage</div>
+            </div>
+            <div class="sim-col PLURIX-vault">
+              <div class="sim-col-label">PLURIX Shared Vaults</div>
+              <div class="sim-col-loss" id="sim-PLURIX-loss">$0.00 Loss</div>
+              <div class="sim-col-sub">100% protected via off-chain signed quote</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- VIEW 2: VAULTS EXPLORER -->
+  <div id="view-vaults" class="view-section">
+    <div class="hero-headline">
+      <div class="hero-tag">CROSS-ASSET POOLING</div>
+      <h1>Shared Liquidity <span>Vault Matrix</span></h1>
+      <p>Single-sided deposit vaults that power zero-slippage executions while earning native yield from protocol routing fees.</p>
+    </div>
+
+    <div class="vaults-grid">
+      
+      <!-- Vault Card 1 -->
+      <div class="glass glass-glow spotlight-card vault-card">
+        <div class="vault-top">
+          <div class="vault-pair">
+            <div class="vault-icons">
+              <img src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png" alt="SOL">
+              <img src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png" alt="USDC">
+            </div>
+            <div class="vault-names">
+              SOL-USDC <span>Core Vault</span>
+            </div>
+          </div>
+          <span class="vault-badge">24.8% APY</span>
+        </div>
+        <div class="vault-stats-row">
+          <div class="v-stat">
+            <div class="v-stat-k">Total Locked</div>
+            <div class="v-stat-v">$6,410,200</div>
+          </div>
+          <div class="v-stat">
+            <div class="v-stat-k">24H Volume</div>
+            <div class="v-stat-v">$18,290,000</div>
+          </div>
+          <div class="v-stat">
+            <div class="v-stat-k">Settlement</div>
+            <div class="v-stat-v green">Instant</div>
+          </div>
+        </div>
+        <button class="btn-deposit" onclick="promptDeposit('SOL-USDC')">Deposit Liquidity</button>
+      </div>
+
+      <!-- Vault Card 2 -->
+      <div class="glass glass-glow spotlight-card vault-card">
+        <div class="vault-top">
+          <div class="vault-pair">
+            <div class="vault-icons">
+              <img src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN/logo.png" alt="JUP">
+              <img src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png" alt="SOL">
+            </div>
+            <div class="vault-names">
+              JUP-SOL <span>Ecosystem Vault</span>
+            </div>
+          </div>
+          <span class="vault-badge">38.2% APY</span>
+        </div>
+        <div class="vault-stats-row">
+          <div class="v-stat">
+            <div class="v-stat-k">Total Locked</div>
+            <div class="v-stat-v">$3,840,100</div>
+          </div>
+          <div class="v-stat">
+            <div class="v-stat-k">24H Volume</div>
+            <div class="v-stat-v">$7,950,400</div>
+          </div>
+          <div class="v-stat">
+            <div class="v-stat-k">Settlement</div>
+            <div class="v-stat-v green">Instant</div>
+          </div>
+        </div>
+        <button class="btn-deposit" onclick="promptDeposit('JUP-SOL')">Deposit Liquidity</button>
+      </div>
+
+      <!-- Vault Card 3 -->
+      <div class="glass glass-glow spotlight-card vault-card">
+        <div class="vault-top">
+          <div class="vault-pair">
+            <div class="vault-icons">
+              <img src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263/logo.png" alt="BONK">
+              <img src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png" alt="SOL">
+            </div>
+            <div class="vault-names">
+              BONK-SOL <span>Meme Vault</span>
+            </div>
+          </div>
+          <span class="vault-badge">54.1% APY</span>
+        </div>
+        <div class="vault-stats-row">
+          <div class="v-stat">
+            <div class="v-stat-k">Total Locked</div>
+            <div class="v-stat-v">$2,190,500</div>
+          </div>
+          <div class="v-stat">
+            <div class="v-stat-k">24H Volume</div>
+            <div class="v-stat-v">$5,120,800</div>
+          </div>
+          <div class="v-stat">
+            <div class="v-stat-k">Settlement</div>
+            <div class="v-stat-v green">Instant</div>
+          </div>
+        </div>
+        <button class="btn-deposit" onclick="promptDeposit('BONK-SOL')">Deposit Liquidity</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- VIEW 3: TOKEN LAUNCHER -->
+  <div id="view-launcher" class="view-section">
+    <div class="hero-headline">
+      <div class="hero-tag">0% PLATFORM FEE · ZERO UPFRONT COST</div>
+      <h1>Launch Token into <span>Shared Vaults</span></h1>
+      <p>Instantly deploy an SPL token backed by shared vault liquidity. Zero liquidity fragmentation, zero sniper attacks.</p>
+    </div>
+
+    <div class="launcher-layout">
+      
+      <div class="glass glass-glow spotlight-card launch-form">
+        <div class="form-group">
+          <label class="form-label">Token Name <span class="req">*</span></label>
+          <input type="text" class="form-input" id="launch-name" placeholder="e.g. HyperFlow Protocol">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Token Ticker / Symbol <span class="req">*</span></label>
+          <input type="text" class="form-input" id="launch-symbol" placeholder="e.g. HFLOW">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Token Description</label>
+          <textarea class="form-input form-textarea" id="launch-desc" placeholder="Decentralized high-frequency settlement engine..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Initial Shared Vault Anchor</label>
+          <select class="form-input" id="launch-anchor">
+            <option value="SOL">SOL Shared Liquidity Vault (Recommended)</option>
+            <option value="USDC">USDC Stable Vault</option>
+          </select>
+        </div>
+
+        <div class="fee-summary-box">
+          <div class="fee-row">
+            <span>Solana Network Rent (SPL Mint + Metadata)</span>
+            <span>~0.02 SOL</span>
+          </div>
+          <div class="fee-row">
+            <span>PLURIX Platform Launch Fee</span>
+            <span style="color:var(--green)">0.00 SOL (Free)</span>
+          </div>
+          <div class="fee-row">
+            <span>Shared Vault Bootstrapping</span>
+            <span style="color:var(--green)">Included Automatically</span>
+          </div>
+          <div class="fee-row">
+            <span>Total Deployment Cost</span>
+            <span>~0.02 SOL</span>
+          </div>
+        </div>
+
+        <button class="btn-execute" onclick="deployTokenLaunch()">
+          Deploy SPL Token on Solana
+        </button>
+      </div>
+
+      <div class="glass spotlight-card panel-card">
+        <h3 style="font-family:var(--display); font-size:19px; margin-bottom:14px;">Why Launch via Shared Vaults?</h3>
+        
+        <div style="display:flex; flex-direction:column; gap:16px; font-size:14.5px; color:var(--text-muted); line-height:1.6;">
+          <div>
+            <strong style="color:var(--text); display:block; margin-bottom:4px;">No Sniper / Sandwich MEV Bot Vulnerability</strong>
+            Because trades execute against private signed oracle vaults, sniper bots cannot front-run or sandwich the launch transaction in a public mempool.
+          </div>
+          <div>
+            <strong style="color:var(--text); display:block; margin-bottom:4px;">Unified Liquidity Depth</strong>
+            Instead of locking separate Raydium, Meteora, and Orca pools with fragmented capital, all pairs route into the protocol's central shared vault.
+          </div>
+          <div>
+            <strong style="color:var(--text); display:block; margin-bottom:4px;">Low-Cost Dev Launch</strong>
+            Pay only the mandatory 0.02 SOL network fee. No mandatory \$500 seed liquidity required.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- VIEW 4: ARCHITECTURE & MECHANICS -->
+  <div id="view-mechanics" class="view-section">
+    <div class="hero-headline">
+      <div class="hero-tag">PROTOCOL SPECIFICATION</div>
+      <h1>How <span>PLURIX Exchange</span> Works</h1>
+      <p>A technical comparison between legacy Constant Product AMMs (x·y=k) and Oracle-Settled Shared Vaults.</p>
+    </div>
+
+    <div class="arch-grid">
+      <div class="glass glass-glow spotlight-card arch-card">
+        <div class="arch-icon">01</div>
+        <div class="arch-title">Signed Off-Chain Quotes</div>
+        <div class="arch-desc">
+          When you enter a trade, high-frequency oracle nodes produce a cryptographic signature of the exact mid-market price with a 5-second validity window. Your trade executes at that exact guaranteed price.
+        </div>
+      </div>
+
+      <div class="glass glass-glow spotlight-card arch-card">
+        <div class="arch-icon">02</div>
+        <div class="arch-title">Zero Self-Slippage</div>
+        <div class="arch-desc">
+          In typical AMMs like Raydium, every trade moves the bonding curve against itself. Shared vaults settle trades against deep collateralized reserves, eliminating mathematical curve slippage.
+        </div>
+      </div>
+
+      <div class="glass glass-glow spotlight-card arch-card">
+        <div class="arch-icon">03</div>
+        <div class="arch-title">Mempool MEV Immunity</div>
+        <div class="arch-desc">
+          Because the execution price is bound to the oracle signature inside the smart contract instruction, validators and MEV searchers cannot sandwich or extract value from your order.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div>PLURIX Protocol · Decentralized Shared Liquidity Vault Engine</div>
+    <div style="display:flex; gap:20px;">
+      <a href="https://solana.com" target="_blank" rel="noopener">Solana Network</a>
+      <a href="https://pyth.network" target="_blank" rel="noopener">Pyth Oracles</a>
+      <a href="https://github.com/soldevut/plurix-core" target="_blank" rel="noopener">Source SDK (GitHub)</a>
+    </div>
+  </footer>
+
+</div>
+
+<!-- MODAL: Token Selector -->
+<div class="modal-overlay" id="token-modal" onclick="closeTokenModal(event)">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div class="modal-title">Select a Token</div>
+      <button class="modal-close" onclick="document.getElementById('token-modal').classList.remove('active')">&times;</button>
+    </div>
+    <input type="text" class="token-search-inp" placeholder="Search by name, symbol, or SPL address..." oninput="filterTokens(this.value)">
+    <div class="token-list" id="token-list-container">
+      <!-- Populated via JS -->
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Transaction Receipt -->
+<div class="modal-overlay" id="receipt-modal">
+  <div class="modal-card receipt-card">
+    <div class="receipt-badge">✓</div>
+    <div class="receipt-title">Order Settled</div>
+    <div class="receipt-desc">Your transaction executed with zero slippage against PLURIX Shared Vaults.</div>
+    <div class="receipt-details">
+      <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+        <span style="color:var(--text-dim)">Status</span>
+        <span style="color:var(--green); font-weight:700">Confirmed (On-Chain)</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+        <span style="color:var(--text-dim)">Slippage Incurred</span>
+        <span style="color:var(--green)">0.00%</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+        <span style="color:var(--text-dim)">MEV Extracted</span>
+        <span style="color:var(--green)">$0.00</span>
+      </div>
+      <div style="display:flex; justify-content:space-between;">
+        <span style="color:var(--text-dim)">Signature</span>
+        <span style="color:var(--accent)" id="receipt-tx-sig">5kP...9vL</span>
+      </div>
+    </div>
+    <button class="btn-close-receipt" onclick="document.getElementById('receipt-modal').classList.remove('active')">
+      Done
+    </button>
+  </div>
+</div>
+
+<script>
+// --- SOUND FX ENGINE (Web Audio API) ---
+let audioCtx = null;
+let sfxEnabled = true;
+
+function initAudio() {
+  if (!audioCtx) {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (AudioContext) audioCtx = new AudioContext();
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+}
+
+function playTone(freq, type, duration, gainVal = 0.08) {
+  if (!sfxEnabled) return;
+  try {
+    initAudio();
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(gainVal, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+  } catch(e) {}
+}
+
+const SFX = {
+  click: () => playTone(880, 'sine', 0.04, 0.04),
+  pluck: () => playTone(1200, 'triangle', 0.08, 0.06),
+  flip: () => {
+    if (!sfxEnabled) return;
+    try {
+      initAudio();
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(700, audioCtx.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.14);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.14);
+    } catch(e){}
+  },
+  ping: () => playTone(1480, 'sine', 0.12, 0.02),
+  success: () => {
+    if (!sfxEnabled) return;
+    const notes = [523.25, 659.25, 783.99, 1046.50];
+    notes.forEach((f, i) => {
+      setTimeout(() => playTone(f, 'sine', 0.35, 0.08), i * 75);
+    });
+  }
+};
+
+function toggleSFX() {
+  sfxEnabled = !sfxEnabled;
+  const btn = document.getElementById('btn-sound-toggle');
+  const icon = document.getElementById('sfx-icon');
+  const txt = document.getElementById('sfx-status');
+  if (sfxEnabled) {
+    btn.classList.remove('muted');
+    icon.textContent = '🔊';
+    txt.textContent = 'SFX ON';
+    SFX.click();
+  } else {
+    btn.classList.add('muted');
+    icon.textContent = '🔇';
+    txt.textContent = 'SFX OFF';
+  }
+}
+
+// --- DYNAMIC QUANTUM BACKGROUND CANVAS ---
+(function initQuantumCanvas() {
+  const canvas = document.getElementById('quantum-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let width, height;
+  let particles = [];
+
+  function resize() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  for (let i = 0; i < 45; i++) {
+    particles.push({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      vx: (Math.random() - 0.5) * 0.4,
+      vy: (Math.random() - 0.5) * 0.4,
+      radius: Math.random() * 1.8 + 0.8,
+      alpha: Math.random() * 0.4 + 0.2
+    });
+  }
+
+  function loop() {
+    ctx.clearRect(0, 0, width, height);
+    for (let i = 0; i < particles.length; i++) {
+      let p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.x < 0) p.x = width;
+      if (p.x > width) p.x = 0;
+      if (p.y < 0) p.y = height;
+      if (p.y > height) p.y = 0;
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(0, 245, 160, ${p.alpha})`;
+      ctx.fill();
+
+      // Connect near particles
+      for (let j = i + 1; j < particles.length; j++) {
+        let p2 = particles[j];
+        let dx = p.x - p2.x;
+        let dy = p.y - p2.y;
+        let dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 110) {
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.strokeStyle = `rgba(0, 245, 160, ${(1 - dist / 110) * 0.12})`;
+          ctx.lineWidth = 0.8;
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
+// --- CYBER-CURSOR & CARD SPOTLIGHT ---
+const dot = document.getElementById('cursor-dot');
+const ring = document.getElementById('cursor-ring');
+let mouseX = -100, mouseY = -100;
+let ringX = -100, ringY = -100;
+
+window.addEventListener('mousemove', (e) => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+  dot.style.transform = `translate(${mouseX}px, ${mouseY}px)`;
+
+  // Update spotlight cards
+  document.querySelectorAll('.spotlight-card').forEach(card => {
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    card.style.setProperty('--mouse-x', `${x}px`);
+    card.style.setProperty('--mouse-y', `${y}px`);
+  });
+});
+
+function animRing() {
+  ringX += (mouseX - ringX) * 0.18;
+  ringY += (mouseY - ringY) * 0.18;
+  ring.style.transform = `translate(${ringX}px, ${ringY}px)`;
+  requestAnimationFrame(animRing);
+}
+animRing();
+
+document.querySelectorAll('button, a, input, select, textarea, .pill-pct').forEach(el => {
+  el.addEventListener('mouseenter', () => document.body.classList.add('cursor-hover'));
+  el.addEventListener('mouseleave', () => document.body.classList.remove('cursor-hover'));
+});
+
+// --- CONFETTI PARTICLE BURST ---
+const fxCanvas = document.getElementById('fx-canvas');
+const fxCtx = fxCanvas.getContext('2d');
+let confettiParticles = [];
+
+function resizeFx() {
+  fxCanvas.width = window.innerWidth;
+  fxCanvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeFx);
+resizeFx();
+
+function triggerConfetti() {
+  const colors = ['#00F5A0', '#62FFD2', '#00D8F6', '#FFFFFF', '#8B5CF6'];
+  const originX = window.innerWidth / 2;
+  const originY = window.innerHeight / 2;
+  for (let i = 0; i < 90; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 8 + 3;
+    confettiParticles.push({
+      x: originX,
+      y: originY,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 2,
+      gravity: 0.18,
+      size: Math.random() * 5 + 3,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      alpha: 1,
+      decay: Math.random() * 0.02 + 0.015
+    });
+  }
+}
+
+function updateConfetti() {
+  fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+  for (let i = confettiParticles.length - 1; i >= 0; i--) {
+    let p = confettiParticles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += p.gravity;
+    p.alpha -= p.decay;
+    if (p.alpha <= 0) {
+      confettiParticles.splice(i, 1);
+      continue;
+    }
+    fxCtx.save();
+    fxCtx.globalAlpha = p.alpha;
+    fxCtx.fillStyle = p.color;
+    fxCtx.beginPath();
+    fxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    fxCtx.fill();
+    fxCtx.restore();
+  }
+  requestAnimationFrame(updateConfetti);
+}
+updateConfetti();
+
+// --- TOKEN DATA ---
+const TOKENS = [
+  { sym: 'SOL', name: 'Solana', priceUsd: 184.20, img: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png', bal: 14.85 },
+  { sym: 'USDC', name: 'USD Coin', priceUsd: 1.00, img: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png', bal: 1450.00 },
+  { sym: 'JUP', name: 'Jupiter', priceUsd: 1.12, img: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN/logo.png', bal: 520.00 },
+  { sym: 'BONK', name: 'Bonk', priceUsd: 0.0000224, img: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263/logo.png', bal: 45000000 },
+  { sym: 'RAY', name: 'Raydium', priceUsd: 3.25, img: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R/logo.png', bal: 80.00 }
+];
+
+let payToken = TOKENS[0];
+let recvToken = TOKENS[1];
+
+function switchView(viewId, btn) {
+  SFX.click();
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+  document.getElementById(`view-${viewId}`).classList.add('active');
+  if (viewId === 'trade') renderChart();
+}
+
+function setMode(mode, btn) {
+  SFX.click();
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function calculateQuote() {
+  const payInp = document.getElementById('pay-amount');
+  const recvInp = document.getElementById('recv-amount');
+  const payVal = parseFloat(payInp.value) || 0;
+
+  const totalUsd = payVal * payToken.priceUsd;
+  const recvVal = totalUsd / recvToken.priceUsd;
+
+  recvInp.value = recvVal ? (recvVal < 0.001 ? recvVal.toFixed(6) : recvVal.toFixed(4)) : '';
+  document.getElementById('pay-usd-est').textContent = `~$${totalUsd.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} USD`;
+  document.getElementById('recv-usd-est').textContent = `~$${totalUsd.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} USD`;
+
+  const rate = (payToken.priceUsd / recvToken.priceUsd);
+  document.getElementById('quote-rate-text').textContent = `1 ${payToken.sym} = ${rate < 0.001 ? rate.toFixed(6) : rate.toFixed(4)} ${recvToken.sym}`;
+}
+
+function flipTokens() {
+  SFX.flip();
+  const temp = payToken;
+  payToken = recvToken;
+  recvToken = temp;
+
+  document.getElementById('pay-token-sym').textContent = payToken.sym;
+  document.getElementById('pay-token-img').src = payToken.img;
+  document.getElementById('pay-bal-display').textContent = `${payToken.bal} ${payToken.sym}`;
+
+  document.getElementById('recv-token-sym').textContent = recvToken.sym;
+  document.getElementById('recv-token-img').src = recvToken.img;
+  document.getElementById('recv-bal-display').textContent = `${recvToken.bal} ${recvToken.sym}`;
+
+  calculateQuote();
+}
+
+function setPayPct(pct) {
+  SFX.pluck();
+  const amt = (payToken.bal * pct).toFixed(payToken.sym === 'SOL' ? 4 : 2);
+  document.getElementById('pay-amount').value = amt;
+  calculateQuote();
+}
+function setMaxPay() { setPayPct(1.0); }
+
+// Countdown timer for signed quote
+let countdown = 5.0;
+setInterval(() => {
+  countdown -= 0.1;
+  if (countdown <= 0) {
+    countdown = 5.0;
+    SFX.ping();
+  }
+  document.getElementById('quote-countdown').textContent = countdown.toFixed(1) + 's';
+}, 100);
+
+// --- MODAL TOKEN SELECTOR ---
+let activeModalSide = 'pay';
+function openTokenModal(side) {
+  SFX.click();
+  activeModalSide = side;
+  renderTokenList(TOKENS);
+  document.getElementById('token-modal').classList.add('active');
+}
+function closeTokenModal(e) {
+  if (e.target.id === 'token-modal') {
+    document.getElementById('token-modal').classList.remove('active');
+  }
+}
+function renderTokenList(list) {
+  const container = document.getElementById('token-list-container');
+  container.innerHTML = list.map(t => `
+    <div class="token-row" onclick="selectToken('${t.sym}')">
+      <div class="token-info">
+        <img src="${t.img}" alt="${t.sym}">
+        <div>
+          <div class="token-sym">${t.sym}</div>
+          <div class="token-name">${t.name}</div>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:var(--mono); font-weight:600; font-size:13px;">$${t.priceUsd.toLocaleString()}</div>
+        <div style="font-size:11px; color:var(--text-dim); font-family:var(--mono)">Bal: ${t.bal}</div>
+      </div>
+    </div>
+  `).join('');
+}
+function filterTokens(q) {
+  const query = q.toLowerCase();
+  const filtered = TOKENS.filter(t => t.sym.toLowerCase().includes(query) || t.name.toLowerCase().includes(query));
+  renderTokenList(filtered);
+}
+function selectToken(sym) {
+  SFX.click();
+  const token = TOKENS.find(t => t.sym === sym);
+  if (activeModalSide === 'pay') {
+    payToken = token;
+    document.getElementById('pay-token-sym').textContent = token.sym;
+    document.getElementById('pay-token-img').src = token.img;
+    document.getElementById('pay-bal-display').textContent = `${token.bal} ${token.sym}`;
+  } else {
+    recvToken = token;
+    document.getElementById('recv-token-sym').textContent = token.sym;
+    document.getElementById('recv-token-img').src = token.img;
+    document.getElementById('recv-bal-display').textContent = `${token.bal} ${token.sym}`;
+  }
+  document.getElementById('token-modal').classList.remove('active');
+  calculateQuote();
+}
+
+// --- REAL-TIME CHART RENDERING ---
+let currentTf = '1D';
+function setTimeframe(tf, btn) {
+  SFX.click();
+  currentTf = tf;
+  document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderChart();
+}
+
+function renderChart() {
+  const canvas = document.getElementById('price-chart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+
+  const w = rect.width;
+  const h = rect.height;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Generate smooth price points
+  const pointsCount = currentTf === '1H' ? 24 : (currentTf === '1D' ? 40 : 60);
+  const data = [];
+  let base = 180;
+  for (let i = 0; i < pointsCount; i++) {
+    base += (Math.random() - 0.48) * 2.2;
+    data.push(base);
+  }
+  data[data.length - 1] = 184.20;
+
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+
+  ctx.beginPath();
+  data.forEach((val, i) => {
+    const x = (i / (pointsCount - 1)) * w;
+    const y = h - ((val - min) / range) * (h - 40) - 20;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+
+  // Area gradient
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, 'rgba(0, 245, 160, 0.22)');
+  grad.addColorStop(1, 'rgba(0, 245, 160, 0.00)');
+
+  ctx.save();
+  ctx.lineTo(w, h);
+  ctx.lineTo(0, h);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.restore();
+
+  // Line
+  ctx.beginPath();
+  data.forEach((val, i) => {
+    const x = (i / (pointsCount - 1)) * w;
+    const y = h - ((val - min) / range) * (h - 40) - 20;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = '#00F5A0';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  // Pulsing dot on last point
+  const lastX = w;
+  const lastY = h - ((data[data.length - 1] - min) / range) * (h - 40) - 20;
+  ctx.beginPath();
+  ctx.arc(lastX - 2, lastY, 4.5, 0, Math.PI * 2);
+  ctx.fillStyle = '#62FFD2';
+  ctx.fill();
+  ctx.shadowColor = '#00F5A0';
+  ctx.shadowBlur = 10;
+}
+window.addEventListener('resize', renderChart);
+
+// --- MEV SIMULATOR ---
+function updateMevSim(val) {
+  const sol = parseFloat(val);
+  document.getElementById('sim-sol-label').textContent = `Trade Size: ${sol} SOL ($${(sol * 184.2).toLocaleString()})`;
+  
+  // Raydium loss formula approx 1.8% to 5.2% based on trade size
+  const lossRate = 0.018 + (sol / 100) * 0.035;
+  const raydiumLoss = (sol * 184.2 * lossRate).toFixed(2);
+  document.getElementById('sim-raydium-loss').textContent = `-$${raydiumLoss}`;
+}
+
+// --- SWAP EXECUTION ---
+function executeSwap() {
+  const btn = document.getElementById('btn-swap-execute');
+  btn.disabled = true;
+  btn.textContent = 'Verifying Signed Oracle Quote...';
+  SFX.pluck();
+
+  setTimeout(() => {
+    btn.textContent = 'Executing Against Vault #04...';
+  }, 600);
+
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.textContent = 'Swap Tokens with Zero Slippage';
+    SFX.success();
+    triggerConfetti();
+
+    // Random simulated signature
+    const chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+    let sig = '';
+    for (let i = 0; i < 44; i++) sig += chars.charAt(Math.floor(Math.random() * chars.length));
+    document.getElementById('receipt-tx-sig').textContent = sig.slice(0, 4) + '...' + sig.slice(-4);
+    document.getElementById('receipt-modal').classList.add('active');
+  }, 1400);
+}
+
+// --- TOKEN LAUNCH EXECUTION ---
+function deployTokenLaunch() {
+  const name = document.getElementById('launch-name').value.trim();
+  const sym = document.getElementById('launch-symbol').value.trim();
+  if (!name || !sym) {
+    alert('Please provide a Token Name and Symbol.');
+    return;
+  }
+  SFX.success();
+  triggerConfetti();
+  alert(`Token ${sym} successfully initialized into PLURIX Shared Vaults!\nNetwork Rent: ~0.02 SOL\nPlatform Fee: 0.00 SOL`);
+}
+
+function promptDeposit(pair) {
+  SFX.pluck();
+  const amt = prompt(`Enter deposit amount for ${pair} Shared Vault:`, '10');
+  if (amt) {
+    SFX.success();
+    triggerConfetti();
+    alert(`Successfully deposited ${amt} into ${pair} Shared Liquidity Vault.`);
+  }
+}
+
+// --- SOLANA WALLET WEB3 INTEGRATION ---
+let userWallet = null;
+async function connectWallet() {
+  SFX.click();
+  const btn = document.getElementById('btn-wallet-connect');
+  const provider = window.solana || window.solflare;
+  if (provider && provider.isPhantom) {
+    try {
+      btn.textContent = 'Connecting...';
+      const resp = await provider.connect();
+      userWallet = resp.publicKey.toString();
+      const shortAddr = userWallet.slice(0, 4) + '...' + userWallet.slice(-4);
+      btn.textContent = shortAddr;
+      btn.classList.add('connected');
+      SFX.success();
+      triggerConfetti();
+
+      // Read real balance from mainnet RPC
+      try {
+        const connection = new solanaWeb3.Connection('https://api.mainnet-beta.solana.com');
+        const balLamports = await connection.getBalance(new solanaWeb3.PublicKey(userWallet));
+        const solBal = (balLamports / solanaWeb3.LAMPORTS_PER_SOL).toFixed(4);
+        TOKENS[0].bal = parseFloat(solBal);
+        document.getElementById('pay-bal-display').textContent = `${solBal} SOL`;
+      } catch(e) {
+        console.warn('RPC balance query error:', e);
+      }
+    } catch(err) {
+      btn.textContent = 'Connect Wallet';
+    }
+  } else {
+    // Simulated connect
+    userWallet = '8zF4...k9Lm';
+    btn.textContent = '8zF4...k9Lm';
+    btn.classList.add('connected');
+    SFX.success();
+    triggerConfetti();
+  }
+}
+
+// Init on load
+window.addEventListener('DOMContentLoaded', () => {
+  calculateQuote();
+  renderChart();
+  updateMevSim(10);
+});
+</script>
+</body>
+</html>

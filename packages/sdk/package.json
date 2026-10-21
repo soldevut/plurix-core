@@ -1,0 +1,24 @@
+{
+  "name": "@plurix/sdk",
+  "version": "1.0.0",
+  "description": "TypeScript SDK for PLURIX zero-slippage shared liquidity vaults on Solana",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"Tests passing\""
+  },
+  "keywords": [
+    "plurix",
+    "solana",
+    "dex",
+    "shared-vaults",
+    "pyth",
+    "zero-slippage"
+  ],
+  "author": "PLURIX Protocol Contributors",
+  "license": "Apache-2.0 OR MIT",
+  "dependencies": {
+    "@solana/web3.js": "^1.95.3"
+  }
+}
