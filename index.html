@@ -951,14 +951,63 @@ footer a:hover { color: var(--accent); }
 
   <!-- FOOTER -->
   <footer>
-    <div>PLURIX Protocol · Decentralized Shared Liquidity Vault Engine</div>
-    <div style="display:flex; gap:20px;">
+    <div style="display:flex; flex-direction:column; gap:6px;">
+      <div>PLURIX Protocol · Decentralized Shared Liquidity Vault Engine</div>
+      <div style="font-size:11.5px; color:var(--text-dim);">
+        Non-custodial software · Peer-to-contract settlement · <a href="javascript:void(0)" onclick="openLegalModal()" style="color:var(--accent); text-decoration:underline;">Regulatory Disclosure (EU MiCA / Non-Custodial)</a>
+      </div>
+    </div>
+    <div style="display:flex; gap:20px; align-items:center;">
       <a href="https://solana.com" target="_blank" rel="noopener">Solana Network</a>
       <a href="https://pyth.network" target="_blank" rel="noopener">Pyth Oracles</a>
       <a href="https://github.com/soldevut/plurix-core" target="_blank" rel="noopener">Source SDK (GitHub)</a>
     </div>
   </footer>
 
+</div>
+
+<!-- MODAL: Regulatory Disclaimer & Legal Terms -->
+<div class="modal-overlay" id="legal-modal" onclick="closeLegalModal(event)">
+  <div class="modal-card" style="max-width: 580px; max-height: 85vh; overflow-y: auto;">
+    <div class="modal-head">
+      <div class="modal-title" style="display:flex; align-items:center; gap:8px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Legal & Regulatory Disclosure
+      </div>
+      <button class="modal-close" onclick="document.getElementById('legal-modal').classList.remove('active')">&times;</button>
+    </div>
+    
+    <div style="font-size: 13px; color: var(--text-muted); line-height: 1.65; display: flex; flex-direction: column; gap: 14px;">
+      <div style="background: rgba(0, 245, 160, 0.05); border: 1px solid rgba(0, 245, 160, 0.2); padding: 12px 14px; border-radius: 10px; color: var(--text);">
+        <strong>EU MiCA Exemption Notice (Recital 22):</strong>
+        PLURIX is an autonomous, open-source peer-to-contract protocol deployed on the Solana blockchain. It operates in a fully decentralized manner without custodial intermediaries, matching engines, or centralized order settlement.
+      </div>
+
+      <div>
+        <strong style="color:var(--text); display:block; margin-bottom:4px;">1. Non-Custodial Architecture</strong>
+        PLURIX never takes custody, possession, control, or custody of user assets. Users interact directly with Solana programs via self-hosted cryptographic keypairs (e.g., Phantom, Solflare). Users retain sole control and legal title over their tokens at all times.
+      </div>
+
+      <div>
+        <strong style="color:var(--text); display:block; margin-bottom:4px;">2. No Financial or Investment Advice</strong>
+        The PLURIX protocol and this web interface do not constitute financial, investment, legal, tax, or regulatory advice. Content displayed does not constitute an offer, solicitation, or recommendation to buy or sell digital assets.
+      </div>
+
+      <div>
+        <strong style="color:var(--text); display:block; margin-bottom:4px;">3. Token Classification</strong>
+        PLURIX tokens and tokens created via the shared vault launcher are decentralized utility and access tokens designed for protocol routing and ecosystem governance. Tokens do not represent equity, shares, debt instruments, or rights to dividends or profits from any legal entity.
+      </div>
+
+      <div>
+        <strong style="color:var(--text); display:block; margin-bottom:4px;">4. Jurisdictional Restrictions & Sanctions</strong>
+        Access to this interface is prohibited for persons located in, or residents of, sanctioned jurisdictions under EU, OFAC, and UN international sanctions programs.
+      </div>
+    </div>
+
+    <button class="btn-close-receipt" style="margin-top: 20px;" onclick="document.getElementById('legal-modal').classList.remove('active')">
+      I Understand & Accept
+    </button>
+  </div>
 </div>
 
 <!-- MODAL: Token Selector -->
@@ -1318,6 +1367,17 @@ setInterval(() => {
   }
   document.getElementById('quote-countdown').textContent = countdown.toFixed(1) + 's';
 }, 100);
+
+// --- MODAL LEGAL & REGULATORY ---
+function openLegalModal() {
+  SFX.click();
+  document.getElementById('legal-modal').classList.add('active');
+}
+function closeLegalModal(e) {
+  if (e.target.id === 'legal-modal') {
+    document.getElementById('legal-modal').classList.remove('active');
+  }
+}
 
 // --- MODAL TOKEN SELECTOR ---
 let activeModalSide = 'pay';
