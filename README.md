@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://test-exchange.vercel.app"><img src="https://img.shields.io/badge/Live%20DEX-test--exchange.vercel.app-00F5A0?style=for-the-badge&logo=googlechrome&logoColor=black" alt="Live App" /></a>
+  <a href="https://plurix.xyz"><img src="https://img.shields.io/badge/Live%20DEX-test--exchange.vercel.app-00F5A0?style=for-the-badge&logo=googlechrome&logoColor=black" alt="Live App" /></a>
   <a href="https://pyth.network"><img src="https://img.shields.io/badge/Pyth-High--Frequency%20Oracles-9945FF?style=for-the-badge" alt="Pyth" /></a>
   <a href="https://solana.com"><img src="https://img.shields.io/badge/Solana-Mainnet--Ready-14F195?style=for-the-badge&logo=solana" alt="Solana" /></a>
   <img src="https://img.shields.io/badge/Self--Slippage-0.00%25-brightgreen?style=for-the-badge" alt="Zero Slippage" />
@@ -118,9 +118,9 @@ console.log('Confirmed without slippage. TX:', txid);
 
 ## 🌐 Official Channels
 
-- **Live DEX App**: [https://test-exchange.vercel.app](https://test-exchange.vercel.app)
+- **Live DEX App**: [https://plurix.xyz](https://plurix.xyz)
 - **Solana Mainnet Program ID**: `PLURiX1111111111111111111111111111111111111`
-- **Documentation**: [https://docs.plurix.xyz](https://test-exchange.vercel.app)
+- **Documentation**: [https://docs.plurix.xyz](https://plurix.xyz)
 
 ---
 
